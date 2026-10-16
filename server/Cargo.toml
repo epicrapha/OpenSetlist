@@ -13,7 +13,7 @@ name = "opensetlist-server"
 path = "src/main.rs"
 
 [dependencies]
-axum = { version = "0.8" }
+axum = { version = "0.8", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }
 sqlx = { version = "0.8", default-features = false, features = [
     "runtime-tokio-rustls",

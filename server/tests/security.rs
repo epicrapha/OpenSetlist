@@ -35,6 +35,7 @@ async fn setup() -> (Router, Arc<AppState>) {
         database_url,
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         cookie_secure: false,
+        upload_dir: std::path::PathBuf::from("./uploads"),
     };
     let state = build_state(config)
         .await

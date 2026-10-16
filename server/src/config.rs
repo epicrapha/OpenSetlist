@@ -1,6 +1,7 @@
 //! Runtime configuration, parsed once at startup from the environment.
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -8,6 +9,9 @@ pub struct Config {
     pub bind_addr: SocketAddr,
     /// Set `COOKIE_SECURE=true` in production (HTTPS). Local dev defaults to false.
     pub cookie_secure: bool,
+    /// Directory where uploaded song assets (PDFs) are stored. Never served
+    /// statically; files are only reached through the authenticated endpoint.
+    pub upload_dir: PathBuf,
 }
 
 impl Config {
@@ -25,10 +29,15 @@ impl Config {
             Ok("true") | Ok("1")
         );
 
+        let upload_dir = std::env::var("UPLOAD_DIR")
+            .unwrap_or_else(|_| "./uploads".to_string())
+            .into();
+
         Ok(Self {
             database_url,
             bind_addr,
             cookie_secure,
+            upload_dir,
         })
     }
 }

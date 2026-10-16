@@ -20,8 +20,11 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-opensetlist}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-opensetlist}
       BIND_ADDR: 0.0.0.0:8080
+      UPLOAD_DIR: /data/uploads
       SESSION_SECRET: ${SESSION_SECRET:-change-me-32-bytes-minimum-dev-only}
       RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - uploads:/data/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -37,3 +40,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

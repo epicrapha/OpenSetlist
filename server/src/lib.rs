@@ -3,6 +3,7 @@
 pub mod auth;
 pub mod config;
 pub mod error;
+pub mod song;
 pub mod state;
 pub mod tenant;
 pub mod workspace;
@@ -53,7 +54,8 @@ pub fn build_router(state: Arc<AppState>) -> Router {
 
     let api = Router::new()
         .merge(auth::routes())
-        .merge(workspace::routes());
+        .merge(workspace::routes())
+        .merge(song::routes());
 
     Router::new()
         .route("/health", get(health))

@@ -82,7 +82,7 @@ Base `/api/v1`, session cookie, workspace-scoped via RLS. Role gates per PRD §8
 
 **Arrangements** (SONG-8, P1): `GET|POST /api/v1/songs/:id/arrangements`, `PATCH|DELETE /api/v1/arrangements/:id`. Shape `{id, song_id, name, key, chordpro}`.
 
-**Assets** (SONG-6 links, SONG-7 PDF): `POST /api/v1/songs/:id/assets` `{kind:"link", url, label?}` · `POST /api/v1/songs/:id/assets/pdf` multipart field `file` (≤10 MB, `application/pdf` only) · `DELETE /api/v1/assets/:id` · `GET /api/v1/assets/:id/file` (auth + tenant checked). Shape `{id, song_id, kind, url, label, filename, size_bytes, content_type, created_at}`.
+**Assets** (SONG-6 links, SONG-7 PDF): `GET /api/v1/songs/:id/assets` → `{ "assets":[Asset] }` · `POST /api/v1/songs/:id/assets` `{kind:"link", url, label?}` · `POST /api/v1/songs/:id/assets/pdf` multipart field `file` (≤10 MB, `application/pdf` only) · `DELETE /api/v1/assets/:id` · `GET /api/v1/assets/:id/file` (auth + tenant checked). Shape `{id, song_id, kind, url, label, filename, size_bytes, content_type, created_at}`.
 
 Storage: disk under `UPLOAD_DIR` (default `./uploads`), **random** object names (never the client filename on disk); S3 later. Uploads are never statically served — only through the authenticated endpoint.
 

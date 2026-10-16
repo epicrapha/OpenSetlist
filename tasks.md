@@ -75,6 +75,7 @@ Decomposition of `PRD.md` / `PLAN.md` into work items. **Static**: describes *wh
 | M1-S4 | PDF upload (disk; S3 later) + size limit | S1 | SONG-7 |
 | M1-S5 | Search/filter (title, artist, key, tempo, tag, last used) | S1 | SONG-9 |
 | M1-S6 | Export ChordPro / PDF / plain text | S1,C1 | SONG-11 |
+| M1-S7 | List song assets (`GET /songs/:id/assets`) — completes S3/S4 | S1 | SONG-6, SONG-7 |
 
 ### Web (lane L2)
 | ID | Task | Deps | Ref |
@@ -85,6 +86,7 @@ Decomposition of `PRD.md` / `PLAN.md` into work items. **Static**: describes *wh
 | M1-W4 | Reference links UI | M1-S3 | SONG-6 |
 | M1-W5 | PDF upload UI | M1-S4 | SONG-7 |
 | M1-W6 | Add-song flow (paste → convert → preview → save) | C4,W2 | §13.3 |
+| M1-W7 | Load asset list from server (replace local-state workaround) | M1-S7 | SONG-6, SONG-7 |
 
 ### M1 acceptance
 | ID | Task | Deps | Ref |

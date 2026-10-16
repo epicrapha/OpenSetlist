@@ -1,7 +1,7 @@
 # OpenSetlist
 
 A free, open source setlist builder and music team tool for worship teams. Build a setlist from a
-shared song library, share it with the band, and perform from it on stage — even offline.
+shared song library, share it with the band, and perform from it on stage, online/offline.
 
 ![OpenSetlist landing page](docs/landing.png)
 

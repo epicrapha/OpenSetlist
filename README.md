@@ -3,6 +3,8 @@
 A free, open source setlist builder and music team tool for worship teams. Build a setlist from a
 shared song library, share it with the band, and perform from it on stage — even offline.
 
+![OpenSetlist landing page](docs/landing.png)
+
 - **Frontend:** SvelteKit (installable PWA)
 - **Backend:** Rust + Axum
 - **Database:** PostgreSQL

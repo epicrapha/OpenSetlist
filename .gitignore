@@ -1,0 +1,25 @@
+# Rust
+server/target/
+**/*.rs.bk
+
+# Node
+node_modules/
+web/.svelte-kit/
+web/build/
+web/dist/
+
+# Env / local
+.env
+.env.local
+
+# Uploaded song assets (runtime only, never committed)
+uploads/
+
+# Local agent config / skills
+.opencode/
+
+# Editor / OS
+.DS_Store
+*.log
+.idea/
+.vscode/

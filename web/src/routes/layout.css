@@ -1,0 +1,110 @@
+@import 'tailwindcss';
+
+/* Design tokens. Dark-first on purpose: the app is used on stage in dim
+   rooms. One well-tuned theme beats two half-tuned ones (PRD §5, §9.3). */
+@theme {
+	/* Type: Fraunces for headings, Hanken Grotesk for UI. */
+	--font-sans:
+		'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--font-display: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+	--font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, monospace;
+
+	--text-display: clamp(1.875rem, 4vw, 2.75rem);
+	--text-display--line-height: 1.08;
+	--text-display--letter-spacing: -0.02em;
+	--text-hero: clamp(2.5rem, 6vw, 4.25rem);
+	--text-hero--line-height: 1.02;
+	--text-hero--letter-spacing: -0.03em;
+
+	/* Colour: ink canvas, warm parchment text, amber stage-light accent. */
+	--color-canvas: oklch(0.19 0.014 265);
+	--color-surface: oklch(0.235 0.016 265);
+	--color-surface-2: oklch(0.29 0.018 265);
+	--color-border: oklch(0.34 0.018 265);
+	--color-border-strong: oklch(0.46 0.02 265);
+	--color-ink: oklch(0.96 0.01 85);
+	--color-muted: oklch(0.74 0.02 265);
+
+	--color-accent: oklch(0.8 0.15 78);
+	--color-accent-hover: oklch(0.87 0.14 80);
+	--color-accent-ink: oklch(0.2 0.02 265);
+	--color-accent-tint: oklch(0.3 0.05 78);
+
+	--color-danger: oklch(0.72 0.16 25);
+	--color-danger-hover: oklch(0.78 0.15 25);
+	--color-danger-text: oklch(0.87 0.08 25);
+	--color-danger-tint: oklch(0.27 0.06 25);
+
+	--color-success: oklch(0.8 0.13 150);
+	--color-success-text: oklch(0.88 0.07 150);
+	--color-success-tint: oklch(0.27 0.05 150);
+
+	/* Shape + depth */
+	--radius-field: 0.625rem;
+	--radius-card: 1rem;
+	--shadow-soft: 0 1px 2px oklch(0 0 0 / 0.35);
+	--shadow-lift: 0 24px 48px -24px oklch(0 0 0 / 0.75);
+}
+
+@layer base {
+	:root {
+		color-scheme: dark;
+	}
+
+	html {
+		/* Keeps anchor / skip-link targets clear of the sticky header (WCAG 2.2 focus-not-obscured). */
+		scroll-padding-top: 5rem;
+	}
+
+	body {
+		background-color: var(--color-canvas);
+		color: var(--color-ink);
+		font-family: var(--font-sans);
+		caret-color: var(--color-accent);
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+
+	a {
+		text-underline-offset: 0.2em;
+	}
+
+	::selection {
+		background-color: var(--color-accent);
+		color: var(--color-accent-ink);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+}
+
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@layer utilities {
+	.animate-rise {
+		animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.animate-rise {
+		animation: none;
+	}
+}

@@ -22,6 +22,7 @@ async fn setup() -> (Router, Arc<AppState>) {
         database_url,
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         cookie_secure: false,
+        session_secret: "test-session-secret-at-least-32-bytes!".to_string(),
         upload_dir: std::env::temp_dir().join(format!("opensetlist-test-{}", Uuid::new_v4())),
     };
     let state = build_state(config)

@@ -9,6 +9,9 @@ pub struct Config {
     pub bind_addr: SocketAddr,
     /// Set `COOKIE_SECURE=true` in production (HTTPS). Local dev defaults to false.
     pub cookie_secure: bool,
+    /// Signs the session cookie. Must be ≥32 bytes and stable across restarts
+    /// and replicas, or every session is silently invalidated.
+    pub session_secret: String,
     /// Directory where uploaded song assets (PDFs) are stored. Never served
     /// statically; files are only reached through the authenticated endpoint.
     pub upload_dir: PathBuf,
@@ -33,10 +36,20 @@ impl Config {
             .unwrap_or_else(|_| "./uploads".to_string())
             .into();
 
+        let session_secret = std::env::var("SESSION_SECRET")
+            .map_err(|_| anyhow::anyhow!("SESSION_SECRET is required (32+ bytes)"))?;
+        if session_secret.len() < 32 {
+            return Err(anyhow::anyhow!(
+                "SESSION_SECRET must be at least 32 bytes (got {})",
+                session_secret.len()
+            ));
+        }
+
         Ok(Self {
             database_url,
             bind_addr,
             cookie_secure,
+            session_secret,
             upload_dir,
         })
     }

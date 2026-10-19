@@ -16,7 +16,10 @@ use axum::{routing::get, Json, Router};
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::trace::TraceLayer;
-use tower_sessions::{cookie::SameSite, SessionManagerLayer};
+use tower_sessions::{
+    cookie::{Key, SameSite},
+    SessionManagerLayer,
+};
 use tower_sessions_sqlx_store::PostgresStore;
 
 use crate::{config::Config, state::AppState};
@@ -49,10 +52,14 @@ pub async fn build_state(config: Config) -> anyhow::Result<Arc<AppState>> {
 /// Build the HTTP router, applying the session layer.
 pub fn build_router(state: Arc<AppState>) -> Router {
     let session_store = PostgresStore::new(state.pool.clone());
+    // Derived from SESSION_SECRET so signed cookies survive restarts and work
+    // across replicas (B6).
+    let key = Key::derive_from(state.config.session_secret.as_bytes());
     let session_layer = SessionManagerLayer::new(session_store)
         .with_name("opensetlist.sid")
         .with_same_site(SameSite::Lax)
-        .with_secure(state.config.cookie_secure);
+        .with_secure(state.config.cookie_secure)
+        .with_signed(key);
 
     let api = Router::new()
         .merge(auth::routes())

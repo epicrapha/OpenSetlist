@@ -71,11 +71,25 @@ Real-time status board. **Task IDs match `tasks.md`** — that file describes sc
 
 **M1 server verification (orch, on disk):** `cargo fmt --check` clean · `cargo clippy --all-targets -- -D warnings` clean · `cargo test` → 4 lib (incl. 2 song unit) + 3 security + **6 songs integration** all pass. Web: `npm run check` 0/0 · vitest 27/27.
 
+## M2 — Setlist builder
+
+| ID | Task | Lane | Status | Evidence |
+|---|---|---|---|---|
+| M2-S1 | Setlists CRUD + status | L1 fixer | ✅ done | `server/src/setlist/**`, `0005_setlists.sql`; §3.3 |
+| M2-S2 | Items (song/note), dense positions, reorder | L1 fixer | ✅ done | `PUT /items/order` validates the exact id set |
+| M2-S3 | Per-item overrides (never mutate the song) | L1 fixer | ✅ done | reset-to-library via `null` works |
+| M2-S4 | Duplicate + template | L1 fixer | ✅ done | copies items/overrides; resets status/template/share |
+| M2-S5 | Share token (idempotent, revocable) | L1 fixer | ✅ done | 32-char URL-safe; revoke → old token 404 |
+| M2-S6 | Public shared-setlist read | L1 fixer | ✅ done | token-scoped RLS; no session/header |
+| M2-W1–W9 | Builder / list / public view / print | L2 designer | 🔄 running | lane `ses_eab678cf…` |
+| M2-A1 | SET-1…9/11 acceptance | orch | ✅ API pass | `scripts/m2-acceptance.py` → **PASS**; print/hints verified web-side |
+
+**M2 server verification (orch):** fmt/clippy clean · **30 tests** (4 lib + 7 invites + 3 security + **10 setlists** + 6 songs) on a fresh DB · live acceptance through the dev server with migration `0005` applied.
+
 ## Later milestones
 
 | Milestone | Status | Note |
 |---|---|---|
-| M2 Setlist builder | 🔄 planned | decomposed into M2-S1…S6 / W1…W9 / A1 (`tasks.md`); `PLAN.md` §3.3 to freeze before dispatch |
 | M3 Stage + offline | ⬜ todo | |
 | M4 Collaboration (CRDT) | ⬜ todo | own plan required |
 | M5 Beta | ⬜ todo | |
@@ -122,3 +136,4 @@ Real-time status board. **Task IDs match `tasks.md`** — that file describes sc
 | 2026-10-16 | Local dev servers started for manual testing (web :5173, server :8080, Postgres in Docker); stale M0 compose images stopped. Seeded demo account + one song. |
 | 2026-10-16 | B8 in progress: froze `PLAN.md` §3.2 (invites). Server work landed + orch-verified (fmt/clippy clean, **20 tests**: 4 lib + 7 invites + 3 security + 6 songs). `0004_invite_accept.sql` adds a token-scoped RLS SELECT policy so accept can resolve a token *before* the tenant is known — RLS still enforced, no BYPASSRLS. Lane flagged non-members getting 403 on `GET .../invites` (leaks workspace existence); contract changed to **404**, fix + invite UI dispatched. |
 | 2026-10-19 | **B8 closed.** Server: `POST /invites/:token/accept` + invite list, `0004_invite_accept.sql` (token-scoped RLS policy — no BYPASSRLS), 404 for non-members; 20 tests, live API smoke **18/18**. Web: `/app/invites` + public `/invite/[token]`, `?next=` with open-redirect guard; check 0/0, lint, build, **34 tests**, headless-Chrome flow signed-out → register → accept → workspace **PASS**. M2 decomposed in `tasks.md`; `PLAN.md` §3.3 (setlists) frozen. |
+| 2026-10-19 | **M2 server complete.** A host restart killed both M2 lanes mid-flight; the server lane was resumed and finished `tests/setlists.rs` (10 tests) + formatting. `0005_setlists.sql`, `server/src/setlist/**`, shared token generator, token-scoped public-share RLS; referenced-song delete maps `23503` → 409. Orch-verified: 30 tests, fmt/clippy clean; `scripts/m2-acceptance.py` → **PASS** against the live dev server with migration 0005. Web lane restarted separately. |

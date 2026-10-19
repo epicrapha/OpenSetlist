@@ -218,7 +218,17 @@ pub async fn delete(
     let result = sqlx::query("delete from songs where id = $1")
         .bind(id)
         .execute(&mut *tx)
-        .await?;
+        .await;
+    let result = match result {
+        // 23503 = foreign_key_violation. `setlist_items.song_id` is ON DELETE
+        // RESTRICT: never silently drop a song out of a setlist.
+        Err(sqlx::Error::Database(error)) if error.code().as_deref() == Some("23503") => {
+            return Err(AppError::Conflict(
+                "song is referenced by a setlist; remove it from the setlist first".into(),
+            ))
+        }
+        other => other?,
+    };
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound);
     }

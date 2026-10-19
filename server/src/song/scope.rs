@@ -20,6 +20,7 @@ pub const WORKSPACE_HEADER: HeaderName = HeaderName::from_static("x-workspace-id
 /// An authenticated caller proven to be a member of a specific workspace.
 pub struct WorkspaceScope {
     pub workspace_id: Uuid,
+    pub user_id: Uuid,
     pub role: Role,
 }
 
@@ -64,6 +65,10 @@ impl FromRequestParts<Arc<AppState>> for WorkspaceScope {
 
         // Non-members (and non-existent workspaces) are indistinguishable: 404.
         let role = role.ok_or(AppError::NotFound)?;
-        Ok(WorkspaceScope { workspace_id, role })
+        Ok(WorkspaceScope {
+            workspace_id,
+            user_id,
+            role,
+        })
     }
 }

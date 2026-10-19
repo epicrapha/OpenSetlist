@@ -3,9 +3,11 @@
 pub mod auth;
 pub mod config;
 pub mod error;
+pub mod setlist;
 pub mod song;
 pub mod state;
 pub mod tenant;
+pub mod token;
 pub mod workspace;
 
 use std::sync::Arc;
@@ -55,7 +57,8 @@ pub fn build_router(state: Arc<AppState>) -> Router {
     let api = Router::new()
         .merge(auth::routes())
         .merge(workspace::routes())
-        .merge(song::routes());
+        .merge(song::routes())
+        .merge(setlist::routes());
 
     Router::new()
         .route("/health", get(health))

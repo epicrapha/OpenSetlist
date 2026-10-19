@@ -93,4 +93,22 @@ impl AppState {
 
         Ok(TenantTx { tx })
     }
+
+    /// Begin a transaction scoped to a public setlist share token. Sets
+    /// `app.current_share_token`, which the token-scoped read policies on
+    /// `setlists`, `setlist_items` and `songs` read. No tenant is set, so this
+    /// exposes only the rows the share policies allow.
+    pub async fn scoped_share_token(&self, token: &str) -> Result<TenantTx<'_>, AppError> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("set local role opensetlist_app")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("select set_config('app.current_share_token', $1, true)")
+            .bind(token)
+            .execute(&mut *tx)
+            .await?;
+
+        Ok(TenantTx { tx })
+    }
 }

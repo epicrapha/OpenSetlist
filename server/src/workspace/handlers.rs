@@ -158,7 +158,7 @@ pub async fn create_invite(
         return Err(AppError::Forbidden);
     }
 
-    let token = Uuid::new_v4().simple().to_string();
+    let token = crate::token::random_token();
     let expires_at = Utc::now() + Duration::days(7);
 
     let sql = format!(

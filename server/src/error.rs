@@ -22,6 +22,8 @@ pub enum AppError {
     #[error("{0}")]
     Validation(String),
     #[error("{0}")]
+    BadRequest(String),
+    #[error("{0}")]
     Conflict(String),
     #[error("{0}")]
     PayloadTooLarge(String),
@@ -49,6 +51,7 @@ impl AppError {
             AppError::Forbidden => "forbidden",
             AppError::NotFound => "not_found",
             AppError::Validation(_) => "validation_error",
+            AppError::BadRequest(_) => "bad_request",
             AppError::Conflict(_) => "conflict",
             AppError::PayloadTooLarge(_) => "payload_too_large",
             AppError::UnsupportedMedia(_) => "unsupported_media_type",
@@ -62,6 +65,7 @@ impl AppError {
             AppError::Forbidden => StatusCode::FORBIDDEN,
             AppError::NotFound => StatusCode::NOT_FOUND,
             AppError::Validation(_) => StatusCode::UNPROCESSABLE_ENTITY,
+            AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::Conflict(_) => StatusCode::CONFLICT,
             AppError::PayloadTooLarge(_) => StatusCode::PAYLOAD_TOO_LARGE,
             AppError::UnsupportedMedia(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
@@ -76,6 +80,7 @@ impl IntoResponse for AppError {
         let code = self.code();
         let message = match &self {
             AppError::Validation(m) | AppError::Conflict(m) => m.clone(),
+            AppError::BadRequest(m) => m.clone(),
             AppError::PayloadTooLarge(m) | AppError::UnsupportedMedia(m) => m.clone(),
             AppError::Unauthorized => "authentication required".to_string(),
             AppError::Forbidden => "not permitted".to_string(),

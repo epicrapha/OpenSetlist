@@ -23,4 +23,5 @@ export const login = (input: LoginInput): Promise<User> =>
 export const logout = (): Promise<void> => request<void>('/auth/logout', { method: 'POST' });
 
 /** Current user + memberships; throws ApiError(401) when the session is gone. */
-export const me = (): Promise<Me> => request<Me>('/auth/me');
+export const me = (options: { auth?: boolean } = {}): Promise<Me> =>
+	request<Me>('/auth/me', { auth: options.auth ?? true });

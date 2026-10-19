@@ -5,3 +5,4 @@ export * from './auth';
 export * from './workspaces';
 export * from './query';
 export * from './songs';
+export * from './invites';

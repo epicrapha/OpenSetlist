@@ -33,6 +33,7 @@ Decomposition of `PRD.md` / `PLAN.md` into work items. **Static**: describes *wh
 | M0-S6 | Invite flow (link/email, token, expiry) | S4 | AUTH-4 |
 | M0-S7 | Security tests: RLS cross-tenant isolation + role guard (executable) | S5, S6 | §9.4 |
 | M0-S8 | Multi-stage `Dockerfile` + SQLx offline prep | S2 | §11.3 |
+| M0-S9 | Invite accept + list endpoints (completes S6) | S6 | AUTH-4 |
 
 ### Web (lane L2 · @designer → @fixer) — owns `web/**`
 | ID | Task | Deps | Ref |
@@ -44,6 +45,7 @@ Decomposition of `PRD.md` / `PLAN.md` into work items. **Static**: describes *wh
 | M0-W5 | Auth pages (register/login) + workspace create/select | W4 | AUTH-1, AUTH-3 |
 | M0-W6 | PWA: manifest, service worker, icons | W1 | PWA-1 |
 | M0-W7 | Static-build `Dockerfile` | W1 | §11.3 |
+| M0-W8 | Invite UI: create/copy link + accept page (completes W5) | W5 | AUTH-4 |
 
 ### M0 acceptance (orchestrator)
 | ID | Task | Deps | Ref |
@@ -95,11 +97,42 @@ Decomposition of `PRD.md` / `PLAN.md` into work items. **Static**: describes *wh
 
 ---
 
+## M2 — Setlist builder
+
+### Server (lane L1) — owns `server/**`
+| ID | Task | Deps | Ref |
+|---|---|---|---|
+| M2-S1 | `setlists` CRUD: title, service date, service type, status (draft/ready/archived) | M1-S1 | SET-1, SET-11 |
+| M2-S2 | `setlist_items`: ordered positions, song + non-song items, move/reorder | S1 | SET-2, SET-3, SET-5 |
+| M2-S3 | Per-item overrides (key, capo, notes) that never mutate the song | S2 | SET-4 |
+| M2-S4 | Duplicate setlist + `is_template` (save as template) | S1 | SET-7 |
+| M2-S5 | Share link: random token, revocable | S1 | SET-8 |
+| M2-S6 | Public shared-setlist read endpoint (no auth; setlist + chart data only) | S5, M1-S1 | SET-8 |
+
+### Web (lane L2) — owns `web/**`
+| ID | Task | Deps | Ref |
+|---|---|---|---|
+| M2-W1 | Setlist list + create/edit header (title, date, service type) | M2-S1 | SET-1 |
+| M2-W2 | Builder: add songs via search + quick add | M2-S2, M1-W1 | SET-2 |
+| M2-W3 | Reorder: drag-and-drop + touch/keyboard move controls | M2-S2 | SET-3 |
+| M2-W4 | Per-song key/capo/notes overrides with "reset to library" | M2-S3 | SET-4 |
+| M2-W5 | Non-song items (prayer, scripture, offering, transition) | M2-S2 | SET-5 |
+| M2-W6 | Total duration + key/tempo transition hints | M2-S2 | SET-6, SET-10 |
+| M2-W7 | Status control + duplicate / save-as-template actions | M2-S4 | SET-7, SET-11 |
+| M2-W8 | Share link UI (copy/revoke) + public view page | M2-S6 | SET-8 |
+| M2-W9 | Print stylesheet: setlist + charts, browser print-to-PDF | M2-W1 | SET-9 |
+
+### M2 acceptance
+| ID | Task | Deps | Ref |
+|---|---|---|---|
+| M2-A1 | SET-1…11 pass; reorder persists; overrides don't touch the song; share link works signed-out; print CSS | all M2 | §7.3 |
+
+---
+
 ## Later milestones (epics — decompose when reached)
 
 | Milestone | Epics | Ref |
 |---|---|---|
-| **M2** Setlist builder | setlists+items, drag/touch reorder, per-song key/capo/notes, share link, export/print | §7.3, §17 |
 | **M3** Stage + offline | stage view, wake lock, PWA pinning, offline cache, sync queue, status indicator | §7.4, §7.6 |
 | **M4** Collaboration | Yjs/Yrs CRDT, presence, live session push, activity log — **own plan** | §7.5 |
 | **M5** Beta | pilot 5–10 churches, docs, hosted beta | §17 |

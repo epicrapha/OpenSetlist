@@ -75,4 +75,22 @@ impl AppState {
 
         Ok(TenantTx { tx })
     }
+
+    /// Begin a transaction that can resolve a single invite by its token before
+    /// the workspace (tenant) is known. Sets `app.current_invite_token`, which
+    /// the `invites_by_token` RLS policy reads. The caller sets the tenant on the
+    /// same transaction afterwards to perform the acceptance writes.
+    pub async fn scoped_invite_token(&self, token: &str) -> Result<TenantTx<'_>, AppError> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("set local role opensetlist_app")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("select set_config('app.current_invite_token', $1, true)")
+            .bind(token)
+            .execute(&mut *tx)
+            .await?;
+
+        Ok(TenantTx { tx })
+    }
 }

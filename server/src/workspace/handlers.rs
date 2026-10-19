@@ -10,8 +10,8 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use super::model::{
-    CreateInviteRequest, CreateWorkspaceRequest, Invite, InviteResponse, Membership, Workspace,
-    WorkspaceResponse,
+    AcceptInviteResponse, CreateInviteRequest, CreateWorkspaceRequest, Invite, InviteListResponse,
+    Membership, Workspace, WorkspaceResponse,
 };
 use super::roles::Role;
 use crate::auth::AuthUser;
@@ -20,6 +20,9 @@ use crate::state::AppState;
 
 const MEMBERSHIP_BY_USER: &str = "select id, user_id, workspace_id, role from memberships \
      where user_id = $1 and workspace_id = $2";
+
+const INVITE_COLUMNS: &str = "id, workspace_id, email::text as email, role, token, \
+     expires_at, accepted_at, created_at";
 
 async fn membership_for(
     tx: &mut crate::tenant::TenantTx<'_>,
@@ -94,15 +97,52 @@ pub async fn get(
         .ok_or(AppError::NotFound)
 }
 
-/// POST /api/v1/workspaces/:id/invites — owner/admin only.
+/// GET /api/v1/workspaces/:id/invites — owner/admin only. Non-members get 404
+/// (like the sibling workspace endpoints, so the response does not reveal that
+/// the workspace exists); members without owner/admin get 403.
+pub async fn list_invites(
+    State(state): State<Arc<AppState>>,
+    user: AuthUser,
+    Path(id): Path<Uuid>,
+) -> Result<Json<InviteListResponse>, AppError> {
+    let AuthUser(user_id) = user;
+    let mut tx = state.scoped(Some(id), Some(user_id)).await?;
+
+    let membership = membership_for(&mut tx, user_id, id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if !membership.role.at_least(Role::Admin) {
+        return Err(AppError::Forbidden);
+    }
+
+    // Pending invites first, then most recent.
+    let sql = format!(
+        "select {INVITE_COLUMNS} from invites where workspace_id = $1 \
+         order by (accepted_at is not null) asc, created_at desc"
+    );
+    let invites = sqlx::query_as::<_, Invite>(&sql)
+        .bind(id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+    Ok(Json(InviteListResponse { invites }))
+}
+
+/// POST /api/v1/workspaces/:id/invites — owner/admin only. `role` may be any
+/// role except `owner` (an invite must never mint a second owner).
 pub async fn create_invite(
     State(state): State<Arc<AppState>>,
     user: AuthUser,
     Path(id): Path<Uuid>,
     Json(req): Json<CreateInviteRequest>,
-) -> Result<(StatusCode, Json<InviteResponse>), AppError> {
+) -> Result<(StatusCode, Json<Invite>), AppError> {
     let AuthUser(user_id) = user;
     let role = Role::parse(&req.role).ok_or_else(|| AppError::Validation("invalid role".into()))?;
+    if role == Role::Owner {
+        return Err(AppError::Validation(
+            "role must be one of admin, leader, member, viewer".into(),
+        ));
+    }
     let email = req.email.trim();
     if email.len() < 3 || !email.contains('@') {
         return Err(AppError::Validation("a valid email is required".into()));
@@ -121,19 +161,107 @@ pub async fn create_invite(
     let token = Uuid::new_v4().simple().to_string();
     let expires_at = Utc::now() + Duration::days(7);
 
-    let invite = sqlx::query_as::<_, Invite>(
+    let sql = format!(
         "insert into invites (workspace_id, email, role, token, expires_at) \
-         values ($1, $2::citext, $3::membership_role, $4, $5) \
-         returning id, workspace_id, email::text as email, role, token, expires_at, accepted_at",
-    )
-    .bind(id)
-    .bind(email)
-    .bind(role.as_str())
-    .bind(&token)
-    .bind(expires_at)
-    .fetch_one(&mut *tx)
-    .await?;
+         values ($1, $2::citext, $3::membership_role, $4, $5) returning {INVITE_COLUMNS}"
+    );
+    let invite = sqlx::query_as::<_, Invite>(&sql)
+        .bind(id)
+        .bind(email)
+        .bind(role.as_str())
+        .bind(&token)
+        .bind(expires_at)
+        .fetch_one(&mut *tx)
+        .await?;
 
     tx.commit().await?;
-    Ok((StatusCode::CREATED, Json(invite.into())))
+    Ok((StatusCode::CREATED, Json(invite)))
+}
+
+/// POST /api/v1/invites/:token/accept — any authenticated user whose email
+/// matches the invite. The token is resolved before the workspace is known, so
+/// the transaction starts under the `invites_by_token` RLS policy, then scopes
+/// itself to the invite's workspace for the acceptance writes.
+pub async fn accept_invite(
+    State(state): State<Arc<AppState>>,
+    user: AuthUser,
+    Path(token): Path<String>,
+) -> Result<(StatusCode, Json<AcceptInviteResponse>), AppError> {
+    let AuthUser(user_id) = user;
+    if token.trim().is_empty() {
+        return Err(AppError::NotFound);
+    }
+
+    let mut tx = state.scoped_invite_token(&token).await?;
+    let sql = format!("select {INVITE_COLUMNS} from invites where token = $1");
+    let invite = sqlx::query_as::<_, Invite>(&sql)
+        .bind(&token)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    // Scope the rest of this transaction to the invite's workspace.
+    sqlx::query("select set_config('app.current_tenant_id', $1, true)")
+        .bind(invite.workspace_id.to_string())
+        .execute(&mut *tx)
+        .await?;
+
+    if invite.accepted_at.is_some() {
+        return Err(AppError::Conflict(
+            "invite has already been accepted".into(),
+        ));
+    }
+    if invite.expires_at < Utc::now() {
+        return Err(AppError::Conflict("invite has expired".into()));
+    }
+
+    let already_member: Option<Uuid> =
+        sqlx::query_scalar("select id from memberships where user_id = $1 and workspace_id = $2")
+            .bind(user_id)
+            .bind(invite.workspace_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    if already_member.is_some() {
+        return Err(AppError::Conflict(
+            "you are already a member of this workspace".into(),
+        ));
+    }
+
+    // Email-bound: the caller's account email must match the invite.
+    let caller_email: Option<String> =
+        sqlx::query_scalar("select email::text from users where id = $1")
+            .bind(user_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let caller_email = caller_email.ok_or(AppError::Unauthorized)?;
+    if !caller_email
+        .trim()
+        .eq_ignore_ascii_case(invite.email.trim())
+    {
+        return Err(AppError::Forbidden);
+    }
+
+    // Accept + join are one atomic write under RLS.
+    sqlx::query("update invites set accepted_at = now() where id = $1")
+        .bind(invite.id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "insert into memberships (user_id, workspace_id, role) \
+         values ($1, $2, $3::membership_role)",
+    )
+    .bind(user_id)
+    .bind(invite.workspace_id)
+    .bind(invite.role.as_str())
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(AcceptInviteResponse {
+            workspace_id: invite.workspace_id,
+            role: invite.role,
+        }),
+    ))
 }

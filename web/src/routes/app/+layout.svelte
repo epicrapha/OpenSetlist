@@ -16,7 +16,12 @@
 		session.workspaces.find((workspace) => workspace.id === session.activeWorkspaceId) ?? null
 	);
 
-	const navItems = $derived([{ href: resolve('/app/songs'), label: 'Songs' }]);
+	const navItems = $derived([
+		{ href: resolve('/app/songs'), label: 'Songs' },
+		...(activeWorkspace?.role === 'owner' || activeWorkspace?.role === 'admin'
+			? [{ href: resolve('/app/invites'), label: 'Invites' }]
+			: [])
+	]);
 	const currentPath = $derived(page.url.pathname);
 
 	let reloading = $state(false);

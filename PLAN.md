@@ -86,6 +86,66 @@ Base `/api/v1`, session cookie, workspace-scoped via RLS. Role gates per PRD §8
 
 Storage: disk under `UPLOAD_DIR` (default `./uploads`), **random** object names (never the client filename on disk); S3 later. Uploads are never statically served — only through the authenticated endpoint.
 
+### 3.2 M0 completion — invites (frozen)
+
+Base `/api/v1`, session cookie. `Invite` JSON: `{id, workspace_id, email, role, token, expires_at, accepted_at, created_at}`.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/workspaces/:id/invites` | → `{ "invites":[Invite] }` (pending first) | owner/admin → 200; other **members** → 403; **non-member → 404** (never reveal that a workspace exists) |
+| POST | `/api/v1/workspaces/:id/invites` | `{email, role}` → 201 Invite. `role` ∈ `admin\|leader\|member\|viewer` (**never `owner`**). Returns `token` so the owner can build the link | owner/admin only |
+| POST | `/api/v1/invites/:token/accept` | session required. Joins the caller to the invite's workspace with the invite's role → 201 `{workspace_id, role}` | any authenticated user |
+
+Accept rules: the token is the secret (high-entropy, single-use). **Unknown token → 404.** **Expired, already accepted, or caller already a member → 409.** **Caller's email ≠ `invite.email` → 403** (email-bound; a share-anything link would need an explicit opt-in flag later). Success sets `accepted_at` and inserts the membership — both in one transaction, under RLS.
+
+### 3.3 M2 — setlists (frozen at M2 start)
+
+Base `/api/v1`, session cookie, workspace-scoped via RLS. Reads need `viewer`+; all writes (create/update/delete/duplicate/share) need `leader`+.
+
+**Setlist JSON**
+```json
+{ "id":"uuid", "workspace_id":"uuid", "title":"str", "service_date":"YYYY-MM-DD|null",
+  "service_type":"str|null", "status":"draft|ready|archived", "is_template":false,
+  "share_token":"str|null", "item_count":0, "created_at":"ts", "updated_at":"ts" }
+```
+
+**SetlistItem JSON** — `song` is embedded on read; `song_id` is what you write.
+```json
+{ "id":"uuid", "setlist_id":"uuid", "position":0, "kind":"song|note",
+  "song_id":"uuid|null", "title":"str|null", "notes":"str|null",
+  "key_override":"str|null", "capo_override":0, "duration_seconds":240,
+  "song": { "id":"uuid", "title":"str", "artist":"str|null", "default_key":"str|null",
+            "tempo":120, "time_signature":"4/4", "chordpro":"str" } | null }
+```
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/setlists` | `?status=&q=&limit=&offset=` → `{ "setlists":[Setlist], "total":n }` |
+| POST | `/api/v1/setlists` | `{title, service_date?, service_type?}` → 201 Setlist |
+| GET | `/api/v1/setlists/:id` | → `{setlist, items:[SetlistItem]}`; 404 if absent or another workspace's |
+| PATCH | `/api/v1/setlists/:id` | partial `{title?, service_date?, service_type?, status?, is_template?}` → Setlist |
+| DELETE | `/api/v1/setlists/:id` | → 204 (items cascade) |
+| POST | `/api/v1/setlists/:id/duplicate` | → 201 Setlist (new id, `draft`, `is_template:false`, no share token; items + overrides copied) |
+| POST | `/api/v1/setlists/:id/items` | `{kind, song_id?, title?, notes?, key_override?, capo_override?, duration_seconds?, position?}` → 201 SetlistItem |
+| PATCH | `/api/v1/setlists/:id/items/:item_id` | partial fields → SetlistItem |
+| DELETE | `/api/v1/setlists/:id/items/:item_id` | → 204 |
+| PUT | `/api/v1/setlists/:id/items/order` | `{item_ids:[uuid]}` must be exactly the setlist's items → 200 `{items}` |
+| POST | `/api/v1/setlists/:id/share` | → 200 `{share_token}` (created once, idempotent) |
+| DELETE | `/api/v1/setlists/:id/share` | → 204 (revokes; the old token 404s) |
+| GET | `/api/v1/shared/setlists/:token` | **public — no session, no workspace header** → `{setlist, items}`; 404 unknown/revoked |
+
+Rules:
+- `kind:"song"` requires a `song_id` in the same workspace (404 otherwise); `kind:"note"` requires `title` (400). Deleting a song referenced by a setlist → **409** (`on delete restrict`) — never silently drop setlist rows.
+- Overrides (`key_override`, `capo_override`, `notes`) live on the item and **never mutate the song**.
+- Positions are dense `0..n-1`, rewritten on insert/move/delete.
+- `status:"archived"` blocks item mutations and share creation → 409; reads and public share still work.
+- Public share returns the setlist header + items + embedded `song` fields only. **Never** emails, memberships, other setlists, or asset files.
+- Share tokens are ≥32 chars URL-safe random, at most one per setlist, revocable.
+
+Deliberate choices:
+- **SET-9 is client-side**: print stylesheet + browser print-to-PDF. No server PDF library.
+- **SET-6**: `duration_seconds` per item; UI defaults songs to 240 s and notes to 60 s; total is a client sum.
+- **SET-10**: key/tempo hints computed client-side from consecutive song items.
 
 ## 4. Data model (M0 slice)
 

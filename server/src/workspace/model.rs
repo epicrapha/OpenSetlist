@@ -50,7 +50,9 @@ pub struct Membership {
     pub role: Role,
 }
 
-#[derive(Debug, sqlx::FromRow)]
+/// An invite. The JSON shape is the frozen contract in PLAN.md §3.2, so `Invite`
+/// is used directly as the response (no separate response type to drift).
+#[derive(Debug, sqlx::FromRow, Serialize)]
 pub struct Invite {
     pub id: Uuid,
     pub workspace_id: Uuid,
@@ -59,29 +61,18 @@ pub struct Invite {
     pub token: String,
     pub expires_at: DateTime<Utc>,
     pub accepted_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct InviteResponse {
-    pub id: Uuid,
-    pub workspace_id: Uuid,
-    pub email: String,
-    pub role: Role,
-    pub token: String,
-    pub expires_at: DateTime<Utc>,
+pub struct InviteListResponse {
+    pub invites: Vec<Invite>,
 }
 
-impl From<Invite> for InviteResponse {
-    fn from(invite: Invite) -> Self {
-        Self {
-            id: invite.id,
-            workspace_id: invite.workspace_id,
-            email: invite.email,
-            role: invite.role,
-            token: invite.token,
-            expires_at: invite.expires_at,
-        }
-    }
+#[derive(Debug, Serialize)]
+pub struct AcceptInviteResponse {
+    pub workspace_id: Uuid,
+    pub role: Role,
 }
 
 #[derive(Debug, Deserialize)]

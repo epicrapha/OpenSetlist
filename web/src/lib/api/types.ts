@@ -117,3 +117,23 @@ export interface Asset {
 }
 
 export type ExportFormat = 'chordpro' | 'text';
+
+/** Invite roles never include `owner` (PLAN.md §3.2). */
+export type InviteRole = 'admin' | 'leader' | 'member' | 'viewer';
+
+export interface Invite {
+	id: string;
+	workspace_id: string;
+	email: string;
+	role: InviteRole;
+	token: string;
+	expires_at: string;
+	accepted_at: string | null;
+	created_at: string;
+}
+
+/** `POST /api/v1/invites/:token/accept`. */
+export interface AcceptInviteResult {
+	workspace_id: string;
+	role: Role;
+}

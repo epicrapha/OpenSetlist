@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { ApiError, login } from '../../lib/api';
+	import { safeNext } from '../../lib/safeNext';
 	import Alert from '../../lib/components/Alert.svelte';
 	import Brand from '../../lib/components/Brand.svelte';
 	import Button from '../../lib/components/Button.svelte';
 	import TextField from '../../lib/components/TextField.svelte';
+
+	const next = $derived(page.url.searchParams.get('next'));
+	const registerHref = $derived(
+		resolve(next ? `/register?next=${encodeURIComponent(next)}` : '/register')
+	);
 
 	let email = $state('');
 	let password = $state('');
@@ -24,7 +31,7 @@
 		submitting = true;
 		try {
 			await login({ email, password });
-			await goto(resolve('/app'));
+			await goto(safeNext(next, resolve('/app')));
 		} catch (cause) {
 			error = cause instanceof ApiError ? cause.message : 'Something went wrong. Please try again.';
 		} finally {
@@ -74,7 +81,7 @@
 
 			<p class="mt-6 text-center text-sm text-muted">
 				New here?
-				<a class="font-medium text-accent hover:underline" href={resolve('/register')}>
+				<a class="font-medium text-accent hover:underline" href={registerHref}>
 					Create an account
 				</a>
 			</p>

@@ -30,12 +30,14 @@ Real-time status board. **Task IDs match `tasks.md`** — that file describes sc
 | M0-S6 | Invite flow | L1 fixer | ✅ done | `non_admin_cannot_create_invites` passes |
 | M0-S7 | RLS isolation + role-guard tests | L1 fixer | ✅ done | fixed: per-test pool (was a static shared across per-test runtimes); 3/3 pass parallel + serial |
 | M0-S8 | Server Dockerfile + SQLx offline | L1 fixer | ✅ done | image builds (142 MB); `sqlx::migrate!` embeds migrations |
+| M0-S9 | Invite accept + list endpoints | L1 fixer | ✅ done | `GET .../invites` (owner/admin 200, member 403, non-member **404**), `POST /invites/:token/accept` (404/409/403/201); `role:owner` rejected; migration `0004` token-scoped RLS policy (no BYPASSRLS). orch-verified: 20 tests, fmt/clippy clean |
 | M0-W1 | SvelteKit scaffold (SPA, Tailwind) | L2a fixer | ✅ done | SvelteKit 3.1.0; check 0/0, build ok (orch-verified) |
 | M0-W2 | Design system | L2b designer | ✅ done | oklch tokens in `layout.css`; polished (scroll-padding, underline offset, caret); orch-verified |
 | M0-W3 | App shell + routing | L2b designer | ✅ done | `app/+layout.svelte`; polished (spinner, workable "Try again", `role=status`); orch-verified |
 | M0-W5 | Auth pages + workspace create/select | L2b designer | ✅ done | polished (focusable error regions, empty state); orch-verified: check 0/0, build ok, lint clean |
 | M0-W6 | PWA manifest + service worker | L2a fixer | ✅ done | manifest + sw.js emitted to `build/` |
 | M0-W7 | Web Dockerfile | L2a fixer | ✅ done | image builds (104 MB); nginx proxies `/api/` + `/health` |
+| M0-W8 | Invite UI: create/copy link + accept page | L2b designer | ✅ done | `/app/invites` (owner/admin only; create, copy link, pending/accepted/expired states) + public `/invite/[token]` accept page; `?next=` on login/register with an open-redirect guard. orch-verified: check 0/0, lint, build, **34 tests**, plus a headless-Chrome run of signed-out → register → auto-accept → workspace |
 | M0-A1 | compose up end-to-end flow | L5 fixer | ✅ done | both images build; e2e via nginx :3000 PASS — orch re-ran `scripts/m0-acceptance.sh` |
 | M0-A2 | Cross-tenant read blocked | L5 fixer | ✅ done | user B → **404** typed `not_found`, no row leak; also proven by `rls_blocks_cross_tenant_reads` |
 | M0-A3 | clippy+test / check+build green | orch | ✅ done | server fmt/clippy clean + full suite green; web check 0/0, build, lint |
@@ -73,7 +75,7 @@ Real-time status board. **Task IDs match `tasks.md`** — that file describes sc
 
 | Milestone | Status | Note |
 |---|---|---|
-| M2 Setlist builder | ⬜ todo | decompose when reached |
+| M2 Setlist builder | 🔄 planned | decomposed into M2-S1…S6 / W1…W9 / A1 (`tasks.md`); `PLAN.md` §3.3 to freeze before dispatch |
 | M3 Stage + offline | ⬜ todo | |
 | M4 Collaboration (CRDT) | ⬜ todo | own plan required |
 | M5 Beta | ⬜ todo | |
@@ -92,7 +94,7 @@ Real-time status board. **Task IDs match `tasks.md`** — that file describes sc
 | B5 | oh-my-opencode preset gated `designer` skills to `[]`; global design skills were unreachable | Medium | resolved — granted in preset (needs restart) + copied into project `.opencode/skills/` |
 | B6 | `SESSION_SECRET` (compose + `.env.example`) is unused — the server never reads it; tower-sessions falls back to a per-process cookie key | Medium | open — wire a persistent key before prod / multi-replica (M1+) |
 | B7 | `sqlx::migrate!` rejects a DB that has an applied migration missing from `migrations/` — the live dev DB has 0003 applied, so a *M0-only* checkout cannot boot against it | Low | open — use a fresh DB (or `docker compose down -v`) when testing the M0 commit |
-| B8 | **No accept-invite endpoint** — invites can be created but never accepted, so adding a teammate is impossible (M0-S6 is incomplete; `server/tests/songs.rs:361` inserts memberships directly) | Medium | open — add `POST /api/v1/invites/:token/accept` |
+| B8 | **No accept-invite endpoint** — invites can be created but never accepted, so adding a teammate is impossible (M0-S6 is incomplete; `server/tests/songs.rs:361` inserts memberships directly) | Medium | ✅ resolved — accept + list endpoints, token-scoped RLS (`0004`), 404-for-non-members, and the full UI. Live API **18/18**; browser flow green |
 | B9 | `GET /songs/:id/arrangements` returns a **bare array** while songs/assets return wrapped objects (`{songs,total}` / `{assets}`) | Low | open — align in `PLAN.md` §3.1 |
 
 ## Changelog
@@ -116,4 +118,7 @@ Real-time status board. **Task IDs match `tasks.md`** — that file describes sc
 | 2026-10-16 | Gap found by M1-W: **no asset-list endpoint**, so links/PDFs disappeared on reload. Added `GET /api/v1/songs/:id/assets` to `PLAN.md` §3.1 + M1-S7/M1-W7 to the WBS; server and web lanes dispatched in parallel (disjoint trees). |
 | 2026-10-16 | M1-S7 + M1-W7 landed; orch re-verified both (server 13 tests + fmt/clippy clean; web check 0/0, 30/30). Fixed the ephemeral-uploads gap the server lane flagged: `docker-compose.yml` now persists `UPLOAD_DIR=/data/uploads` in a named volume; `.env.example` documents the local default. |
 | 2026-10-16 | **M1 acceptance PASS** — added `scripts/m1-acceptance.py` (28 checks): SONG-1 metadata, SONG-9 search/filter/sort/paginate, SONG-11 export (chordpro + text), duplicate, SONG-6 links, SONG-7 PDF (upload/download/415/413), SONG-8 arrangements lifecycle, auth (401/422), tenant isolation (404), delete. Opened B8, B9. |
+| 2026-10-16 | **M1 pushed** (`bb85d50`) — rebased onto your `d24e51e` README edit, then pushed. |
 | 2026-10-16 | Local dev servers started for manual testing (web :5173, server :8080, Postgres in Docker); stale M0 compose images stopped. Seeded demo account + one song. |
+| 2026-10-16 | B8 in progress: froze `PLAN.md` §3.2 (invites). Server work landed + orch-verified (fmt/clippy clean, **20 tests**: 4 lib + 7 invites + 3 security + 6 songs). `0004_invite_accept.sql` adds a token-scoped RLS SELECT policy so accept can resolve a token *before* the tenant is known — RLS still enforced, no BYPASSRLS. Lane flagged non-members getting 403 on `GET .../invites` (leaks workspace existence); contract changed to **404**, fix + invite UI dispatched. |
+| 2026-10-19 | **B8 closed.** Server: `POST /invites/:token/accept` + invite list, `0004_invite_accept.sql` (token-scoped RLS policy — no BYPASSRLS), 404 for non-members; 20 tests, live API smoke **18/18**. Web: `/app/invites` + public `/invite/[token]`, `?next=` with open-redirect guard; check 0/0, lint, build, **34 tests**, headless-Chrome flow signed-out → register → accept → workspace **PASS**. M2 decomposed in `tasks.md`; `PLAN.md` §3.3 (setlists) frozen. |

@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { ApiError, login, register } from '../../lib/api';
+	import { safeNext } from '../../lib/safeNext';
 	import Alert from '../../lib/components/Alert.svelte';
 	import Brand from '../../lib/components/Brand.svelte';
 	import Button from '../../lib/components/Button.svelte';
 	import TextField from '../../lib/components/TextField.svelte';
+
+	const next = $derived(page.url.searchParams.get('next'));
+	const loginHref = $derived(resolve(next ? `/login?next=${encodeURIComponent(next)}` : '/login'));
 
 	let name = $state('');
 	let email = $state('');
@@ -27,7 +32,7 @@
 			await register({ name, email, password });
 			// register issues no session per contract; sign in to start one.
 			await login({ email, password });
-			await goto(resolve('/app'));
+			await goto(safeNext(next, resolve('/app')));
 		} catch (cause) {
 			error = cause instanceof ApiError ? cause.message : 'Something went wrong. Please try again.';
 		} finally {
@@ -87,7 +92,7 @@
 
 			<p class="mt-6 text-center text-sm text-muted">
 				Already have an account?
-				<a class="font-medium text-accent hover:underline" href={resolve('/login')}>Sign in</a>
+				<a class="font-medium text-accent hover:underline" href={loginHref}>Sign in</a>
 			</p>
 		</div>
 	</main>

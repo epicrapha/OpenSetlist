@@ -108,3 +108,70 @@
 		animation: none;
 	}
 }
+
+/* SET-9: print-to-PDF is the export path. The shared page prints as a clean
+   paper run sheet; app chrome and interactive controls are hidden. */
+@media print {
+	@page {
+		margin: 14mm;
+	}
+
+	:root {
+		color-scheme: light;
+	}
+
+	html,
+	body {
+		background: #fff !important;
+		color: #000 !important;
+	}
+
+	.print-hide {
+		display: none !important;
+	}
+
+	.print-setlist {
+		max-width: none !important;
+		padding: 0 !important;
+	}
+
+	.print-setlist,
+	.print-setlist * {
+		background: transparent !important;
+		color: #000 !important;
+		box-shadow: none !important;
+		text-shadow: none !important;
+		border-color: #c8c8c8 !important;
+	}
+
+	.print-setlist a {
+		text-decoration: none;
+	}
+
+	.print-item {
+		break-inside: avoid;
+		page-break-inside: avoid;
+		border: 0 !important;
+		border-bottom: 1px solid #c8c8c8 !important;
+		border-radius: 0 !important;
+		margin: 0 0 9mm !important;
+		padding: 0 0 9mm !important;
+	}
+
+	.print-item:last-child {
+		border-bottom: 0 !important;
+	}
+
+	.print-chart,
+	.print-chart section,
+	.print-chart p {
+		break-inside: avoid;
+		page-break-inside: avoid;
+	}
+
+	.print-item h1,
+	.print-item h2,
+	.print-item h3 {
+		break-after: avoid;
+	}
+}

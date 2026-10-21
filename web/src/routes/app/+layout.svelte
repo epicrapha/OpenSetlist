@@ -17,6 +17,7 @@
 	);
 
 	const navItems = $derived([
+		{ href: resolve('/app/setlists'), label: 'Setlists' },
 		{ href: resolve('/app/songs'), label: 'Songs' },
 		...(activeWorkspace?.role === 'owner' || activeWorkspace?.role === 'admin'
 			? [{ href: resolve('/app/invites'), label: 'Invites' }]
@@ -48,7 +49,7 @@
 </script>
 
 <div class="flex min-h-dvh flex-col">
-	<header class="sticky top-0 z-40 border-b border-border bg-canvas/85 backdrop-blur">
+	<header class="print-hide sticky top-0 z-40 border-b border-border bg-canvas/85 backdrop-blur">
 		<div class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
 			<div class="flex min-w-0 items-center gap-4">
 				<Brand />
